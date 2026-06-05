@@ -1,3 +1,4 @@
+import traceback
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,6 +7,18 @@ import seaborn as sns
 import numpy as np
 from pathlib import Path
 
+try:
+    df = cargar_datos()
+except FileNotFoundError:
+    st.error(
+        "⚠️ No se encontró `data/processed/dinagua_limpio.csv`. "
+        "Ejecutá primero el notebook `practice.ipynb` para generarlo."
+    )
+    st.stop()
+except Exception as e:
+    st.error(f"❌ Error inesperado al cargar los datos: {e}")
+    st.code(traceback.format_exc())
+    st.stop()
 # =========================================================
 # CONFIGURACIÓN DE LA PÁGINA
 # =========================================================
