@@ -384,6 +384,7 @@ else:
         )
         df_mapa_vol["radio"] = (1500 + df_mapa_vol["vol_norm"] * 6500).astype(int)
 
+
         vol_min = int(df_mapa_vol["Volumen"].min())
         vol_med = int(df_mapa_vol["Volumen"].median())
         vol_max = int(vol_p95)
