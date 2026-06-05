@@ -2,23 +2,10 @@ import traceback
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import seaborn as sns
 import numpy as np
 from pathlib import Path
 
-try:
-    df = cargar_datos()
-except FileNotFoundError:
-    st.error(
-        "⚠️ No se encontró `data/processed/dinagua_limpio.csv`. "
-        "Ejecutá primero el notebook `practice.ipynb` para generarlo."
-    )
-    st.stop()
-except Exception as e:
-    st.error(f"❌ Error inesperado al cargar los datos: {e}")
-    st.code(traceback.format_exc())
-    st.stop()
 # =========================================================
 # CONFIGURACIÓN DE LA PÁGINA
 # =========================================================
@@ -30,7 +17,7 @@ st.set_page_config(
 sns.set_theme(style="whitegrid", context="notebook")
 
 # =========================================================
-# CARGA DE DATOS
+# CARGA DE DATOS — definir ANTES de llamar
 # =========================================================
 BASE_DIR = Path(__file__).parent
 
@@ -42,7 +29,9 @@ def cargar_datos():
     )
     for col in ["Fecha de Inscripción", "Fecha de Resolución"]:
         df[col] = pd.to_datetime(df[col], errors="coerce")
-    df["Fecha de Solicitud"] = pd.to_datetime(df["Fecha de Solicitud"], errors="coerce")
+    df["Fecha de Solicitud"] = pd.to_datetime(
+        df["Fecha de Solicitud"], errors="coerce"
+    )
     if "Dias_Tramite" not in df.columns:
         df["Dias_Tramite"] = (
             df["Fecha de Inscripción"] - df["Fecha de Resolución"]
@@ -58,6 +47,10 @@ except FileNotFoundError:
         "⚠️ No se encontró `data/processed/dinagua_limpio.csv`. "
         "Ejecutá primero el notebook `practice.ipynb` para generarlo."
     )
+    st.stop()
+except Exception as e:
+    st.error(f"❌ Error inesperado al cargar los datos: {e}")
+    st.code(traceback.format_exc())
     st.stop()
 
 # =========================================================
@@ -112,33 +105,17 @@ st.markdown("---")
 # =========================================================
 # SECCIÓN 1 — PANEL INICIAL (MÉTRICAS)
 # =========================================================
-# Cálculo sobre df completo (no filtrado) para las métricas globales
 anio_max = int(df["Anio_Solicitud"][df["Anio_Solicitud"] < 2026].max())
 por_anio = df[df["Anio_Solicitud"] < 2026].groupby("Anio_Solicitud").size()
 promedio_anual = round(por_anio.mean(), 0)
 ultimo_anio_count = int(por_anio.get(anio_max, 0))
 
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric(
-    "Registros filtrados",
-    f"{len(df_f):,}"
-)
-col2.metric(
-    "Mediana de demora",
-    f"{df_f['Dias_Tramite'].median():.0f} días"
-)
-col3.metric(
-    f"Derechos otorgados en {anio_max}",
-    f"{ultimo_anio_count:,}"
-)
-col4.metric(
-    "Promedio anual histórico",
-    f"{promedio_anual:,.0f}"
-)
-col5.metric(
-    "Departamentos",
-    f"{df_f['Departamento'].nunique()}"
-)
+col1.metric("Registros filtrados", f"{len(df_f):,}")
+col2.metric("Mediana de demora", f"{df_f['Dias_Tramite'].median():.0f} días")
+col3.metric(f"Derechos otorgados en {anio_max}", f"{ultimo_anio_count:,}")
+col4.metric("Promedio anual histórico", f"{promedio_anual:,.0f}")
+col5.metric("Departamentos", f"{df_f['Departamento'].nunique()}")
 
 st.markdown("---")
 
@@ -153,7 +130,6 @@ with tab_num:
     st.markdown("Estadísticas del dataset **después de aplicar los filtros**:")
     cols_desc = ["Dias_Tramite", "Caudal", "Volumen", "profundidad"]
     cols_desc = [c for c in cols_desc if c in df_f.columns]
-
     desc = df_f[cols_desc].agg(
         ["mean", "median", "std", "min",
          lambda x: x.quantile(0.25),
@@ -169,28 +145,30 @@ with tab_num:
 
 with tab_cat:
     st.markdown("Distribución de las variables categóricas principales:")
-
     c1, c2, c3 = st.columns(3)
-
     with c1:
         st.markdown("**Tipo de Uso**")
         uso_cnt = df_f["Uso"].value_counts().reset_index()
         uso_cnt.columns = ["Uso", "Cantidad"]
-        uso_cnt["% del total"] = (uso_cnt["Cantidad"] / uso_cnt["Cantidad"].sum() * 100).round(1)
+        uso_cnt["% del total"] = (
+            uso_cnt["Cantidad"] / uso_cnt["Cantidad"].sum() * 100
+        ).round(1)
         st.dataframe(uso_cnt, use_container_width=True, hide_index=True)
-
     with c2:
         st.markdown("**Destino**")
         dest_cnt = df_f["Destino"].value_counts().reset_index()
         dest_cnt.columns = ["Destino", "Cantidad"]
-        dest_cnt["% del total"] = (dest_cnt["Cantidad"] / dest_cnt["Cantidad"].sum() * 100).round(1)
+        dest_cnt["% del total"] = (
+            dest_cnt["Cantidad"] / dest_cnt["Cantidad"].sum() * 100
+        ).round(1)
         st.dataframe(dest_cnt, use_container_width=True, hide_index=True)
-
     with c3:
         st.markdown("**Departamento**")
         depto_cnt = df_f["Departamento"].value_counts().reset_index()
         depto_cnt.columns = ["Departamento", "Cantidad"]
-        depto_cnt["% del total"] = (depto_cnt["Cantidad"] / depto_cnt["Cantidad"].sum() * 100).round(1)
+        depto_cnt["% del total"] = (
+            depto_cnt["Cantidad"] / depto_cnt["Cantidad"].sum() * 100
+        ).round(1)
         st.dataframe(depto_cnt, use_container_width=True, hide_index=True)
 
 st.markdown("---")
@@ -226,7 +204,7 @@ st.pyplot(fig1)
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 5 — PANEL DE DISTRIBUCIONES CATEGÓRICAS
+# SECCIÓN 4 — DISTRIBUCIONES CATEGÓRICAS
 # =========================================================
 st.header("📈 Distribución por Categorías")
 
@@ -268,29 +246,24 @@ sns.despine()
 plt.tight_layout()
 st.pyplot(fig3)
 st.markdown("---")
+
 # =========================================================
-# SECCIÓN 5 — HEATMAP TEMPORAL: SOLICITUDES POR DEPARTAMENTO
+# SECCIÓN 5 — HEATMAP TEMPORAL
 # =========================================================
 st.header("🗓️ Solicitudes por Departamento y Año")
 st.markdown(
-    "Intensidad de solicitudes de derechos de uso por departamento "
-    "a lo largo del tiempo. Colores más oscuros indican mayor actividad."
+    "Intensidad de solicitudes por departamento a lo largo del tiempo. "
+    "Colores más oscuros indican mayor actividad."
 )
 
-# Preparar pivot
 df_heat = df_f[df_f["Anio_Solicitud"].between(2010, 2025)].copy()
-
 pivot = (
     df_heat.groupby(["Departamento", "Anio_Solicitud"])
-    .size()
-    .unstack(fill_value=0)
+    .size().unstack(fill_value=0)
 )
 pivot.columns = pivot.columns.astype(int)
-
-# Ordenar departamentos por total descendente
 pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=False).index]
 
-# Selector: valores absolutos o normalizados por fila
 modo_heat = st.radio(
     "Mostrar valores:",
     options=["Absolutos (cantidad)", "Normalizados por departamento (%)"],
@@ -309,46 +282,30 @@ else:
     cbar_label = "Cantidad de solicitudes"
     cmap_heat  = "YlOrRd"
 
-# Gráfico
 fig_heat, ax_heat = plt.subplots(figsize=(14, 7))
-
-sns.heatmap(
-    datos_heat,
-    annot=True,
-    fmt=fmt,
-    cmap=cmap_heat,
-    linewidths=0.4,
-    linecolor="black",
-    cbar_kws={"label": cbar_label, "shrink": 0.8},
-    ax=ax_heat
-)
-
-ax_heat.set_title(
-    "Solicitudes de derechos de uso por departamento y año",
-    fontsize=14, fontweight="bold", pad=16
-)
+sns.heatmap(datos_heat, annot=True, fmt=fmt, cmap=cmap_heat,
+            linewidths=0.4, linecolor="black",
+            cbar_kws={"label": cbar_label, "shrink": 0.8}, ax=ax_heat)
+ax_heat.set_title("Solicitudes por departamento y año",
+                  fontsize=14, fontweight="bold", pad=16)
 ax_heat.set_xlabel("Año", fontsize=11)
 ax_heat.set_ylabel("Departamento", fontsize=11)
 ax_heat.tick_params(axis="x", rotation=45, labelsize=10)
-ax_heat.tick_params(axis="y", rotation=0,  labelsize=10)
-
+ax_heat.tick_params(axis="y", rotation=0, labelsize=10)
 plt.tight_layout()
 st.pyplot(fig_heat)
 
-# Observaciones automáticas debajo del gráfico
-col_max = datos_heat.max(axis=0)
+col_max   = datos_heat.max(axis=0)
 anio_pico = int(col_max.idxmax())
 depto_top = datos_heat.sum(axis=1).idxmax()
 depto_crecimiento = (datos_heat[2025] - datos_heat[2010]).idxmax()
-
 st.markdown(
     f"**Observaciones:** el año con mayor actividad global fue **{anio_pico}**. "
     f"El departamento con más solicitudes históricas es **{depto_top}**. "
-    f"El mayor crecimiento entre 2010 y 2025 se registró en "
-    f"**{depto_crecimiento}**."
+    f"El mayor crecimiento entre 2010 y 2025 se registró en **{depto_crecimiento}**."
 )
-
 st.markdown("---")
+
 # =========================================================
 # SECCIÓN 6 — MAPA GEOGRÁFICO
 # =========================================================
@@ -369,97 +326,98 @@ df_mapa = df_mapa[
     (df_mapa["lon"].between(-59.5, -53.0))
 ].dropna(subset=["lat", "lon"])
 
+MAPA_ESTILO = "mapbox://styles/mapbox/dark-v10"
+
 if df_mapa.empty:
     st.warning("⚠️ No hay puntos georreferenciados para los filtros seleccionados.")
 else:
+    import pydeck as pdk
+
     if modo_mapa == "Tipo de Uso":
-        # Paleta tab10 — un color por uso
         usos_unicos = sorted(df_mapa["Uso"].dropna().unique())
         tab10 = plt.cm.get_cmap("tab10", len(usos_unicos))
-        color_map = {uso: tab10(i) for i, uso in enumerate(usos_unicos)}
-
-        def uso_a_rgb(uso):
-            r, g, b, _ = color_map.get(uso, (0.5, 0.5, 0.5, 1))
-            return [int(r*255), int(g*255), int(b*255), 180]
-
-        df_mapa["color"] = df_mapa["Uso"].apply(uso_a_rgb)
-
-        # Leyenda
-        st.markdown("**Referencia de colores:**")
-        cols_leyenda = st.columns(len(usos_unicos))
+        color_map = {}
         for i, uso in enumerate(usos_unicos):
-            r, g, b, _ = color_map[uso]
-            hex_color = "#{:02x}{:02x}{:02x}".format(
-                int(r*255), int(g*255), int(b*255)
-            )
-            cols_leyenda[i].markdown(
-                f"<span style='background:{hex_color};"
-                f"padding:2px 10px;border-radius:4px;"
-                f"color:white;font-size:12px'>{uso}</span>",
-                unsafe_allow_html=True
-            )
-        st.markdown("")
-        st.caption(f"📍 {len(df_mapa):,} registros ubicados en el territorio nacional")
+            r, g, b, _ = tab10(i)
+            color_map[uso] = [int(r*255), int(g*255), int(b*255), 200]
 
-        import pydeck as pdk
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=df_mapa,
-            get_position=["lon", "lat"],
-            get_color="color",
-            get_radius=3000,
-            pickable=True,
+        df_mapa["color"] = df_mapa["Uso"].apply(
+            lambda u: color_map.get(u, [150, 150, 150, 180])
         )
-        view = pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6)
+
+        leyenda_html = "<div style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;'>"
+        for uso in usos_unicos:
+            r, g, b, _ = tab10(usos_unicos.index(uso))
+            hex_c = "#{:02x}{:02x}{:02x}".format(int(r*255), int(g*255), int(b*255))
+            leyenda_html += (
+                f"<span style='background:{hex_c};color:white;"
+                f"padding:3px 10px;border-radius:12px;font-size:12px;'>{uso}</span>"
+            )
+        leyenda_html += "</div>"
+        st.markdown(leyenda_html, unsafe_allow_html=True)
+        st.caption(f"📍 {len(df_mapa):,} registros georreferenciados")
+
+        layer = pdk.Layer(
+            "ScatterplotLayer", data=df_mapa,
+            get_position=["lon", "lat"], get_color="color",
+            get_radius=3000, pickable=True, auto_highlight=True,
+        )
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
-            initial_view_state=view,
+            initial_view_state=pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6),
+            map_style=MAPA_ESTILO,
             tooltip={"text": "Uso: {Uso}"}
         ))
 
     else:
-        # Paleta coolwarm — tamaño y color según volumen
-        df_mapa["Volumen"] = pd.to_numeric(df_mapa["Volumen"], errors="coerce")
-        df_mapa_vol = df_mapa.dropna(subset=["Volumen"]).copy()
+        df_mapa_vol = df_mapa.copy()
+        df_mapa_vol["Volumen"] = pd.to_numeric(df_mapa_vol["Volumen"], errors="coerce")
+        df_mapa_vol = df_mapa_vol.dropna(subset=["Volumen"])
 
-        # Normalizar volumen al percentil 95 para escala de color y tamaño
         vol_p95 = df_mapa_vol["Volumen"].quantile(0.95)
         df_mapa_vol["vol_norm"] = (
             df_mapa_vol["Volumen"].clip(upper=vol_p95) / vol_p95
         )
+        cmap_vol = plt.cm.get_cmap("coolwarm")
+        df_mapa_vol["color"] = df_mapa_vol["vol_norm"].apply(
+            lambda n: [int(c*255) for c in cmap_vol(n)[:3]] + [200]
+        )
+        df_mapa_vol["radio"] = (1500 + df_mapa_vol["vol_norm"] * 6500).astype(int)
 
-        # Color coolwarm: azul (bajo) → rojo (alto)
-        cmap = plt.cm.get_cmap("coolwarm")
-        def vol_a_rgb(norm):
-            r, g, b, _ = cmap(norm)
-            return [int(r*255), int(g*255), int(b*255), 180]
-
-        df_mapa_vol["color"] = df_mapa_vol["vol_norm"].apply(vol_a_rgb)
-        # Radio proporcional al volumen (mín 1500m, máx 8000m)
-        df_mapa_vol["radio"] = (
-            1500 + df_mapa_vol["vol_norm"] * 6500
-        ).astype(int)
+        vol_min = int(df_mapa_vol["Volumen"].min())
+        vol_med = int(df_mapa_vol["Volumen"].median())
+        vol_max = int(vol_p95)
+        r_b, g_b, b_b, _ = cmap_vol(0.0)
+        r_m, g_m, b_m, _ = cmap_vol(0.5)
+        r_a, g_a, b_a, _ = cmap_vol(1.0)
+        hex_b = "#{:02x}{:02x}{:02x}".format(int(r_b*255), int(g_b*255), int(b_b*255))
+        hex_m = "#{:02x}{:02x}{:02x}".format(int(r_m*255), int(g_m*255), int(b_m*255))
+        hex_a = "#{:02x}{:02x}{:02x}".format(int(r_a*255), int(g_a*255), int(b_a*255))
 
         st.markdown(
-            "🔵 **Azul** = volumen bajo &nbsp;&nbsp; 🔴 **Rojo** = volumen alto &nbsp;&nbsp; "
-            "⬤ **Tamaño** proporcional al volumen (hasta p95)"
+            f"<div style='display:flex;align-items:center;gap:12px;"
+            f"margin-bottom:12px;font-size:12px;'>"
+            f"<span>Volumen:</span>"
+            f"<span style='background:{hex_b};color:white;padding:3px 10px;"
+            f"border-radius:12px;'>Bajo (&lt;{vol_min:,} m³)</span>"
+            f"<span style='background:{hex_m};color:white;padding:3px 10px;"
+            f"border-radius:12px;'>Medio (~{vol_med:,} m³)</span>"
+            f"<span style='background:{hex_a};color:white;padding:3px 10px;"
+            f"border-radius:12px;'>Alto (&gt;{vol_max:,} m³)</span>"
+            f"<span style='color:#aaa;'>— Tamaño proporcional al volumen</span>"
+            f"</div>",
+            unsafe_allow_html=True
         )
-        st.caption(
-            f"📍 {len(df_mapa_vol):,} registros con volumen georreferenciados"
-        )
+        st.caption(f"📍 {len(df_mapa_vol):,} registros con volumen georreferenciados")
 
-        import pydeck as pdk
         layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=df_mapa_vol,
-            get_position=["lon", "lat"],
-            get_color="color",
-            get_radius="radio",
-            pickable=True,
+            "ScatterplotLayer", data=df_mapa_vol,
+            get_position=["lon", "lat"], get_color="color",
+            get_radius="radio", pickable=True, auto_highlight=True,
         )
-        view = pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6)
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
-            initial_view_state=view,
+            initial_view_state=pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6),
+            map_style=MAPA_ESTILO,
             tooltip={"text": "Volumen: {Volumen} m³\nUso: {Uso}"}
         ))
