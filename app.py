@@ -7,17 +7,17 @@ import numpy as np
 from pathlib import Path
 
 # =========================================================
-# CONFIGURACIÓN DE LA PÁGINA
+# CONFIGURACION DE LA PAGINA
 # =========================================================
 st.set_page_config(
-    page_title="Gestión de Recursos Hídricos - DINAGUA",
+    page_title="Gestion de Recursos Hidricos - DINAGUA",
     page_icon="💧",
     layout="wide"
 )
 sns.set_theme(style="whitegrid", context="notebook")
 
 # =========================================================
-# CARGA DE DATOS — definir ANTES de llamar
+# CARGA DE DATOS
 # =========================================================
 BASE_DIR = Path(__file__).parent
 
@@ -32,11 +32,22 @@ def cargar_datos():
     df["Fecha de Solicitud"] = pd.to_datetime(
         df["Fecha de Solicitud"], errors="coerce"
     )
-    if "Dias_Tramite" not in df.columns:
-        df["Dias_Tramite"] = (
-            df["Fecha de Inscripción"] - df["Fecha de Resolución"]
-        ).dt.days
-    df = df[df["Dias_Tramite"] >= 0]
+    # Calcular los tres indicadores temporales
+    df["Demora_Tecnica"] = (
+        df["Fecha de Resolución"] - df["Fecha de Solicitud"]
+    ).dt.days
+    df["Demora_Registral"] = (
+        df["Fecha de Inscripción"] - df["Fecha de Resolución"]
+    ).dt.days
+    df["Demora_Total"] = (
+        df["Fecha de Inscripción"] - df["Fecha de Solicitud"]
+    ).dt.days
+    # Solo tramites validos
+    df = df[
+        (df["Demora_Tecnica"] >= 0) &
+        (df["Demora_Registral"] >= 0) &
+        (df["Demora_Total"] >= 0)
+    ]
     df["Anio_Solicitud"] = df["Fecha de Solicitud"].dt.year
     return df
 
@@ -44,28 +55,28 @@ try:
     df = cargar_datos()
 except FileNotFoundError:
     st.error(
-        "⚠️ No se encontró `data/processed/dinagua_limpio.csv`. "
-        "Ejecutá primero el notebook `practice.ipynb` para generarlo."
+        "No se encontro data/processed/dinagua_limpio.csv. "
+        "Ejecuta primero el notebook practice.ipynb para generarlo."
     )
     st.stop()
 except Exception as e:
-    st.error(f"❌ Error inesperado al cargar los datos: {e}")
+    st.error(f"Error inesperado al cargar los datos: {e}")
     st.code(traceback.format_exc())
     st.stop()
 
 # =========================================================
 # SIDEBAR — FILTROS
 # =========================================================
-st.sidebar.markdown("## 🔧 Filtros")
+st.sidebar.markdown("## Filtros")
 st.sidebar.markdown("---")
 
-p95 = int(df["Dias_Tramite"].quantile(0.95))
+p95 = int(df["Demora_Tecnica"].quantile(0.95))
 rango_dias = st.sidebar.slider(
-    "Rango de días del trámite",
-    min_value=int(df["Dias_Tramite"].min()),
+    "Rango de demora tecnica (dias)",
+    min_value=int(df["Demora_Tecnica"].min()),
     max_value=p95,
     value=(0, p95),
-    help="Filtra registros según la demora del trámite (hasta el percentil 95)"
+    help="Filtra registros segun la demora tecnica (hasta el percentil 95)"
 )
 
 usos_disponibles = sorted(df["Uso"].dropna().unique().tolist())
@@ -80,14 +91,14 @@ regionales_sel = st.sidebar.multiselect(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "📁 Fuente: [DINAGUA](https://www.gub.uy/ministerio-ambiente/) "
+    "Fuente: [DINAGUA](https://www.gub.uy/ministerio-ambiente/) "
     "— Ministerio de Ambiente, Uruguay"
 )
 
 # Aplicar filtros
 df_f = df[
-    (df["Dias_Tramite"] >= rango_dias[0]) &
-    (df["Dias_Tramite"] <= rango_dias[1]) &
+    (df["Demora_Tecnica"] >= rango_dias[0]) &
+    (df["Demora_Tecnica"] <= rango_dias[1]) &
     (df["Uso"].isin(usos_sel)) &
     (df["Regional"].isin(regionales_sel))
 ].copy()
@@ -95,15 +106,15 @@ df_f = df[
 # =========================================================
 # ENCABEZADO
 # =========================================================
-st.title("💧 Gestión de Recursos Hídricos — DINAGUA")
+st.title("💧 Gestion de Recursos Hidricos — DINAGUA")
 st.markdown(
-    "Análisis interactivo de solicitudes de derechos de uso de agua "
-    "registradas por la Dirección Nacional de Aguas del Uruguay."
+    "Analisis interactivo de solicitudes de derechos de uso de agua "
+    "registradas por la Direccion Nacional de Aguas del Uruguay."
 )
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 1 — PANEL INICIAL (MÉTRICAS)
+# SECCION 1 — PANEL INICIAL (METRICAS)
 # =========================================================
 anio_max = int(df["Anio_Solicitud"][df["Anio_Solicitud"] < 2026].max())
 por_anio = df[df["Anio_Solicitud"] < 2026].groupby("Anio_Solicitud").size()
@@ -112,23 +123,24 @@ ultimo_anio_count = int(por_anio.get(anio_max, 0))
 
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Registros filtrados", f"{len(df_f):,}")
-col2.metric("Mediana de demora", f"{df_f['Dias_Tramite'].median():.0f} días")
+col2.metric("Mediana demora tecnica", f"{df_f['Demora_Tecnica'].median():.0f} dias")
 col3.metric(f"Derechos otorgados en {anio_max}", f"{ultimo_anio_count:,}")
-col4.metric("Promedio anual histórico", f"{promedio_anual:,.0f}")
+col4.metric("Promedio anual historico", f"{promedio_anual:,.0f}")
 col5.metric("Departamentos", f"{df_f['Departamento'].nunique()}")
 
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 2 — ANÁLISIS DESCRIPTIVO
+# SECCION 2 — RESUMEN DESCRIPTIVO
 # =========================================================
 st.header("📋 Resumen Descriptivo")
 
-tab_num, tab_cat = st.tabs(["Variables numéricas", "Variables categóricas"])
+tab_num, tab_cat = st.tabs(["Variables numericas", "Variables categoricas"])
 
 with tab_num:
-    st.markdown("Estadísticas del dataset **después de aplicar los filtros**:")
-    cols_desc = ["Dias_Tramite", "Caudal", "Volumen", "profundidad"]
+    st.markdown("Estadisticas del dataset **despues de aplicar los filtros**:")
+    cols_desc = ["Demora_Tecnica", "Demora_Registral", "Demora_Total",
+                 "Caudal", "Volumen", "profundidad"]
     cols_desc = [c for c in cols_desc if c in df_f.columns]
     desc = df_f[cols_desc].agg(
         ["mean", "median", "std", "min",
@@ -136,15 +148,15 @@ with tab_num:
          lambda x: x.quantile(0.75),
          "max"]
     ).T
-    desc.columns = ["Media", "Mediana", "Desv. Std", "Mínimo",
-                    "Q1 (25%)", "Q3 (75%)", "Máximo"]
-    desc["Rango"] = desc["Máximo"] - desc["Mínimo"]
-    desc = desc[["Mediana", "Media", "Desv. Std", "Mínimo",
-                 "Q1 (25%)", "Q3 (75%)", "Máximo", "Rango"]]
+    desc.columns = ["Media", "Mediana", "Desv. Std", "Minimo",
+                    "Q1 (25%)", "Q3 (75%)", "Maximo"]
+    desc["Rango"] = desc["Maximo"] - desc["Minimo"]
+    desc = desc[["Mediana", "Media", "Desv. Std", "Minimo",
+                 "Q1 (25%)", "Q3 (75%)", "Maximo", "Rango"]]
     st.dataframe(desc.style.format("{:.2f}"), use_container_width=True)
 
 with tab_cat:
-    st.markdown("Distribución de las variables categóricas principales:")
+    st.markdown("Distribucion de las variables categoricas principales:")
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("**Tipo de Uso**")
@@ -174,39 +186,53 @@ with tab_cat:
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 3 — DISTRIBUCIÓN DEL TARGET
+# SECCION 3 — DISTRIBUCION DE INDICADORES TEMPORALES
 # =========================================================
-st.header("📊 Distribución de la Demora del Trámite")
+st.header("📊 Distribucion de los Indicadores Temporales")
 st.markdown(
-    "Histograma de `Dias_Tramite` — días transcurridos entre la "
-    "Resolución y la Inscripción del derecho de uso."
+    "Distribucion de las tres etapas del proceso administrativo "
+    "de solicitudes de derechos de uso de agua."
 )
 
-fig1, ax1 = plt.subplots(figsize=(12, 4))
-sns.histplot(
-    df_f["Dias_Tramite"], bins=50, color="#1D9E75",
-    edgecolor="white", kde=True,
-    line_kws={"color": "#085041", "linewidth": 2}, ax=ax1
-)
-ax1.axvline(df_f["Dias_Tramite"].median(), color="coral",
-            linestyle="--", linewidth=1.8,
-            label=f"Mediana: {df_f['Dias_Tramite'].median():.0f} días")
-ax1.axvline(df_f["Dias_Tramite"].mean(), color="navy",
-            linestyle="--", linewidth=1.8,
-            label=f"Media: {df_f['Dias_Tramite'].mean():.0f} días")
-ax1.set_title("Distribución de Dias_Tramite", fontsize=14, fontweight="bold")
-ax1.set_xlabel("Días (Resolución → Inscripción)", fontsize=11)
-ax1.set_ylabel("Frecuencia", fontsize=11)
-ax1.legend(fontsize=10)
+indicadores = [
+    ("Demora_Tecnica",   "Demora Tecnica (Solicitud → Resolucion)",   "#1D9E75"),
+    ("Demora_Registral", "Demora Registral (Resolucion → Inscripcion)", "#5A7DD8"),
+    ("Demora_Total",     "Demora Total (Solicitud → Inscripcion)",     "#D85A30"),
+]
+
+fig_dist, axes_dist = plt.subplots(3, 1, figsize=(12, 10))
+
+for i, (col, titulo, color) in enumerate(indicadores):
+    limite = df_f[col].quantile(0.95)
+    datos  = df_f[df_f[col] <= limite][col].dropna()
+
+    sns.histplot(datos, bins=40, color=color, edgecolor="white",
+                 kde=False, ax=axes_dist[i])
+    axes_dist[i].axvline(
+        datos.median(), color="navy", linestyle="--", linewidth=1.5,
+        label=f"Mediana: {datos.median():.0f} dias"
+    )
+    axes_dist[i].axvline(
+        datos.mean(), color="red", linestyle="--", linewidth=1.5,
+        label=f"Media: {datos.mean():.0f} dias"
+    )
+    axes_dist[i].set_title(titulo, fontsize=12, fontweight="bold")
+    axes_dist[i].set_xlabel("Dias", fontsize=10)
+    axes_dist[i].set_ylabel("Frecuencia", fontsize=10)
+    axes_dist[i].legend(fontsize=9)
+    axes_dist[i].grid(True, linestyle="--", linewidth=0.7,
+                      color="gray", alpha=0.5)
+    axes_dist[i].set_axisbelow(True)
+
 sns.despine()
 plt.tight_layout()
-st.pyplot(fig1)
+st.pyplot(fig_dist)
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 4 — DISTRIBUCIONES CATEGÓRICAS
+# SECCION 4 — DISTRIBUCION POR CATEGORIAS
 # =========================================================
-st.header("📈 Distribución por Categorías")
+st.header("📈 Distribucion por Categorias")
 
 fig3, axis3 = plt.subplots(2, 2, figsize=(16, 10))
 
@@ -224,22 +250,24 @@ axis3[0, 1].set_title("Solicitudes por Tipo de Uso", fontweight="bold")
 axis3[0, 1].set_xlabel("Cantidad")
 axis3[0, 1].set_ylabel("")
 
-limite = df_f["Dias_Tramite"].quantile(0.95)
-df_box = df_f[df_f["Dias_Tramite"] <= limite]
-orden_box = (df_box.groupby("Regional")["Dias_Tramite"]
+limite = df_f["Demora_Tecnica"].quantile(0.95)
+df_box = df_f[df_f["Demora_Tecnica"] <= limite]
+orden_box = (df_box.groupby("Regional")["Demora_Tecnica"]
              .median().sort_values(ascending=False).index)
-sns.boxplot(data=df_box, x="Dias_Tramite", y="Regional", order=orden_box,
+sns.boxplot(data=df_box, x="Demora_Tecnica", y="Regional", order=orden_box,
             palette="tab10", ax=axis3[1, 0])
-axis3[1, 0].set_title("Demora por Regional (hasta p95)", fontweight="bold")
-axis3[1, 0].set_xlabel("Días")
+axis3[1, 0].set_title("Demora Tecnica por Regional (hasta p95)",
+                      fontweight="bold")
+axis3[1, 0].set_xlabel("Dias")
 axis3[1, 0].set_ylabel("")
 
-orden_uso_box = (df_box.groupby("Uso")["Dias_Tramite"]
+orden_uso_box = (df_box.groupby("Uso")["Demora_Tecnica"]
                  .median().sort_values(ascending=False).index)
-sns.boxplot(data=df_box, x="Dias_Tramite", y="Uso", order=orden_uso_box,
+sns.boxplot(data=df_box, x="Demora_Tecnica", y="Uso", order=orden_uso_box,
             palette="tab10", ax=axis3[1, 1])
-axis3[1, 1].set_title("Demora por Tipo de Uso (hasta p95)", fontweight="bold")
-axis3[1, 1].set_xlabel("Días")
+axis3[1, 1].set_title("Demora Tecnica por Tipo de Uso (hasta p95)",
+                      fontweight="bold")
+axis3[1, 1].set_xlabel("Dias")
 axis3[1, 1].set_ylabel("")
 
 sns.despine()
@@ -248,12 +276,121 @@ st.pyplot(fig3)
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 5 — HEATMAP TEMPORAL
+# SECCION 5 — SERIES TEMPORALES
 # =========================================================
-st.header("🗓️ Solicitudes por Departamento y Año")
+st.header("📅 Evolucion Temporal")
+
+df_temp = df_f[df_f["Anio_Solicitud"].between(2000, 2025)].copy()
+
+tab_vol, tab_sol = st.tabs(["Volumen autorizado", "Cantidad de solicitudes"])
+
+with tab_vol:
+    modo_vol = st.radio(
+        "Desglosar por:",
+        options=["Total", "Uso", "Departamento"],
+        horizontal=True, key="radio_vol"
+    )
+    fig_v, ax_v = plt.subplots(figsize=(14, 5))
+
+    if modo_vol == "Total":
+        vol_anual = df_temp.groupby("Anio_Solicitud")["Volumen"].sum().reset_index()
+        vol_anual["Volumen_M"] = vol_anual["Volumen"] / 1e6
+        ax_v.fill_between(vol_anual["Anio_Solicitud"], vol_anual["Volumen_M"],
+                          alpha=0.25, color="#1D9E75")
+        ax_v.plot(vol_anual["Anio_Solicitud"], vol_anual["Volumen_M"],
+                  color="#1D9E75", linewidth=2.5, marker="o", markersize=5)
+        ax_v.set_ylabel("Volumen autorizado (millones m3)", fontsize=11)
+        ax_v.set_title("Volumen total autorizado por ano", fontsize=14,
+                       fontweight="bold")
+    elif modo_vol == "Uso":
+        vol_uso = (df_temp.groupby(["Anio_Solicitud", "Uso"])["Volumen"]
+                   .sum().unstack(fill_value=0) / 1e6)
+        for col in vol_uso.columns:
+            ax_v.plot(vol_uso.index, vol_uso[col], linewidth=2,
+                      marker="o", markersize=4, label=col)
+        ax_v.set_ylabel("Volumen (millones m3)", fontsize=11)
+        ax_v.set_title("Volumen autorizado por ano y Tipo de Uso",
+                       fontsize=14, fontweight="bold")
+        ax_v.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
+    else:
+        top_depto = df_temp["Departamento"].value_counts().head(5).index
+        df_dep = df_temp[df_temp["Departamento"].isin(top_depto)]
+        vol_dep = (df_dep.groupby(["Anio_Solicitud", "Departamento"])["Volumen"]
+                   .sum().unstack(fill_value=0) / 1e6)
+        for col in vol_dep.columns:
+            ax_v.plot(vol_dep.index, vol_dep[col], linewidth=2,
+                      marker="o", markersize=4, label=col)
+        ax_v.set_ylabel("Volumen (millones m3)", fontsize=11)
+        ax_v.set_title("Volumen autorizado por ano y Departamento (top 5)",
+                       fontsize=14, fontweight="bold")
+        ax_v.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
+
+    ax_v.set_xlabel("Ano", fontsize=11)
+    ax_v.set_xticks(range(2000, 2026, 5))
+    ax_v.tick_params(axis="x", rotation=45)
+    ax_v.grid(axis="y", linestyle="--", linewidth=0.7, color="gray", alpha=0.5)
+    sns.despine()
+    plt.tight_layout()
+    st.pyplot(fig_v)
+
+with tab_sol:
+    modo_sol = st.radio(
+        "Desglosar por:",
+        options=["Total", "Uso", "Departamento"],
+        horizontal=True, key="radio_sol"
+    )
+    fig_s, ax_s = plt.subplots(figsize=(14, 5))
+
+    if modo_sol == "Total":
+        sol_anual = df_temp.groupby("Anio_Solicitud").size().reset_index(
+            name="Cantidad")
+        ax_s.fill_between(sol_anual["Anio_Solicitud"], sol_anual["Cantidad"],
+                          alpha=0.25, color="#5A7DD8")
+        ax_s.plot(sol_anual["Anio_Solicitud"], sol_anual["Cantidad"],
+                  color="#5A7DD8", linewidth=2.5, marker="o", markersize=5)
+        ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
+        ax_s.set_title("Cantidad de solicitudes por ano", fontsize=14,
+                       fontweight="bold")
+    elif modo_sol == "Uso":
+        sol_uso = (df_temp.groupby(["Anio_Solicitud", "Uso"])
+                   .size().unstack(fill_value=0))
+        for col in sol_uso.columns:
+            ax_s.plot(sol_uso.index, sol_uso[col], linewidth=2,
+                      marker="o", markersize=4, label=col)
+        ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
+        ax_s.set_title("Solicitudes por ano y Tipo de Uso",
+                       fontsize=14, fontweight="bold")
+        ax_s.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
+    else:
+        top_depto = df_temp["Departamento"].value_counts().head(5).index
+        df_dep2 = df_temp[df_temp["Departamento"].isin(top_depto)]
+        sol_dep = (df_dep2.groupby(["Anio_Solicitud", "Departamento"])
+                   .size().unstack(fill_value=0))
+        for col in sol_dep.columns:
+            ax_s.plot(sol_dep.index, sol_dep[col], linewidth=2,
+                      marker="o", markersize=4, label=col)
+        ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
+        ax_s.set_title("Solicitudes por ano y Departamento (top 5)",
+                       fontsize=14, fontweight="bold")
+        ax_s.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
+
+    ax_s.set_xlabel("Ano", fontsize=11)
+    ax_s.set_xticks(range(2000, 2026, 5))
+    ax_s.tick_params(axis="x", rotation=45)
+    ax_s.grid(axis="y", linestyle="--", linewidth=0.7, color="gray", alpha=0.5)
+    sns.despine()
+    plt.tight_layout()
+    st.pyplot(fig_s)
+
+st.markdown("---")
+
+# =========================================================
+# SECCION 6 — HEATMAP TEMPORAL
+# =========================================================
+st.header("🗓️ Solicitudes por Departamento y Ano")
 st.markdown(
     "Intensidad de solicitudes por departamento a lo largo del tiempo. "
-    "Colores más oscuros indican mayor actividad."
+    "Colores mas oscuros indican mayor actividad."
 )
 
 df_heat = df_f[df_f["Anio_Solicitud"].between(2010, 2025)].copy()
@@ -267,8 +404,7 @@ pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=False).index]
 modo_heat = st.radio(
     "Mostrar valores:",
     options=["Absolutos (cantidad)", "Normalizados por departamento (%)"],
-    horizontal=True,
-    key="radio_heat"
+    horizontal=True, key="radio_heat"
 )
 
 if modo_heat == "Normalizados por departamento (%)":
@@ -286,9 +422,9 @@ fig_heat, ax_heat = plt.subplots(figsize=(14, 7))
 sns.heatmap(datos_heat, annot=True, fmt=fmt, cmap=cmap_heat,
             linewidths=0.4, linecolor="black",
             cbar_kws={"label": cbar_label, "shrink": 0.8}, ax=ax_heat)
-ax_heat.set_title("Solicitudes por departamento y año",
+ax_heat.set_title("Solicitudes por departamento y ano",
                   fontsize=14, fontweight="bold", pad=16)
-ax_heat.set_xlabel("Año", fontsize=11)
+ax_heat.set_xlabel("Ano", fontsize=11)
 ax_heat.set_ylabel("Departamento", fontsize=11)
 ax_heat.tick_params(axis="x", rotation=45, labelsize=10)
 ax_heat.tick_params(axis="y", rotation=0, labelsize=10)
@@ -300,16 +436,16 @@ anio_pico = int(col_max.idxmax())
 depto_top = datos_heat.sum(axis=1).idxmax()
 depto_crecimiento = (datos_heat[2025] - datos_heat[2010]).idxmax()
 st.markdown(
-    f"**Observaciones:** el año con mayor actividad global fue **{anio_pico}**. "
-    f"El departamento con más solicitudes históricas es **{depto_top}**. "
-    f"El mayor crecimiento entre 2010 y 2025 se registró en **{depto_crecimiento}**."
+    f"**Observaciones:** el ano con mayor actividad global fue **{anio_pico}**. "
+    f"El departamento con mas solicitudes historicas es **{depto_top}**. "
+    f"El mayor crecimiento entre 2010 y 2025 se registro en **{depto_crecimiento}**."
 )
 st.markdown("---")
 
 # =========================================================
-# SECCIÓN 6 — MAPA GEOGRÁFICO
+# SECCION 7 — MAPA GEOGRAFICO
 # =========================================================
-st.header("🗺️ Distribución Geográfica de las Solicitudes")
+st.header("🗺️ Distribucion Geografica de las Solicitudes")
 
 modo_mapa = st.radio(
     "Colorear puntos por:",
@@ -329,13 +465,13 @@ df_mapa = df_mapa[
 MAPA_ESTILO = "mapbox://styles/mapbox/dark-v10"
 
 if df_mapa.empty:
-    st.warning("⚠️ No hay puntos georreferenciados para los filtros seleccionados.")
+    st.warning("No hay puntos georreferenciados para los filtros seleccionados.")
 else:
     import pydeck as pdk
 
     if modo_mapa == "Tipo de Uso":
         usos_unicos = sorted(df_mapa["Uso"].dropna().unique())
-        tab10 = plt.cm.get_cmap("tab10", len(usos_unicos))
+        tab10 = plt.colormaps["tab10"].resampled(len(usos_unicos))
         color_map = {}
         for i, uso in enumerate(usos_unicos):
             r, g, b, _ = tab10(i)
@@ -346,8 +482,8 @@ else:
         )
 
         leyenda_html = "<div style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;'>"
-        for uso in usos_unicos:
-            r, g, b, _ = tab10(usos_unicos.index(uso))
+        for i, uso in enumerate(usos_unicos):
+            r, g, b, _ = tab10(i)
             hex_c = "#{:02x}{:02x}{:02x}".format(int(r*255), int(g*255), int(b*255))
             leyenda_html += (
                 f"<span style='background:{hex_c};color:white;"
@@ -364,26 +500,28 @@ else:
         )
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
-            initial_view_state=pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6),
+            initial_view_state=pdk.ViewState(
+                latitude=-32.5, longitude=-56.0, zoom=6),
             map_style=MAPA_ESTILO,
             tooltip={"text": "Uso: {Uso}"}
         ))
 
     else:
         df_mapa_vol = df_mapa.copy()
-        df_mapa_vol["Volumen"] = pd.to_numeric(df_mapa_vol["Volumen"], errors="coerce")
+        df_mapa_vol["Volumen"] = pd.to_numeric(
+            df_mapa_vol["Volumen"], errors="coerce")
         df_mapa_vol = df_mapa_vol.dropna(subset=["Volumen"])
 
         vol_p95 = df_mapa_vol["Volumen"].quantile(0.95)
         df_mapa_vol["vol_norm"] = (
             df_mapa_vol["Volumen"].clip(upper=vol_p95) / vol_p95
         )
-        cmap_vol = plt.cm.get_cmap("coolwarm")
+        cmap_vol = plt.colormaps["coolwarm"]
         df_mapa_vol["color"] = df_mapa_vol["vol_norm"].apply(
             lambda n: [int(c*255) for c in cmap_vol(n)[:3]] + [200]
         )
-        df_mapa_vol["radio"] = (1500 + df_mapa_vol["vol_norm"] * 6500).astype(int)
-
+        df_mapa_vol["radio"] = (
+            1500 + df_mapa_vol["vol_norm"] * 6500).astype(int)
 
         vol_min = int(df_mapa_vol["Volumen"].min())
         vol_med = int(df_mapa_vol["Volumen"].median())
@@ -391,25 +529,29 @@ else:
         r_b, g_b, b_b, _ = cmap_vol(0.0)
         r_m, g_m, b_m, _ = cmap_vol(0.5)
         r_a, g_a, b_a, _ = cmap_vol(1.0)
-        hex_b = "#{:02x}{:02x}{:02x}".format(int(r_b*255), int(g_b*255), int(b_b*255))
-        hex_m = "#{:02x}{:02x}{:02x}".format(int(r_m*255), int(g_m*255), int(b_m*255))
-        hex_a = "#{:02x}{:02x}{:02x}".format(int(r_a*255), int(g_a*255), int(b_a*255))
+        hex_b = "#{:02x}{:02x}{:02x}".format(
+            int(r_b*255), int(g_b*255), int(b_b*255))
+        hex_m = "#{:02x}{:02x}{:02x}".format(
+            int(r_m*255), int(g_m*255), int(b_m*255))
+        hex_a = "#{:02x}{:02x}{:02x}".format(
+            int(r_a*255), int(g_a*255), int(b_a*255))
 
         st.markdown(
             f"<div style='display:flex;align-items:center;gap:12px;"
             f"margin-bottom:12px;font-size:12px;'>"
             f"<span>Volumen:</span>"
             f"<span style='background:{hex_b};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Bajo (&lt;{vol_min:,} m³)</span>"
+            f"border-radius:12px;'>Bajo (&lt;{vol_min:,} m3)</span>"
             f"<span style='background:{hex_m};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Medio (~{vol_med:,} m³)</span>"
+            f"border-radius:12px;'>Medio (~{vol_med:,} m3)</span>"
             f"<span style='background:{hex_a};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Alto (&gt;{vol_max:,} m³)</span>"
-            f"<span style='color:#aaa;'>— Tamaño proporcional al volumen</span>"
+            f"border-radius:12px;'>Alto (&gt;{vol_max:,} m3)</span>"
+            f"<span style='color:#aaa;'>Tamano proporcional al volumen</span>"
             f"</div>",
             unsafe_allow_html=True
         )
-        st.caption(f"📍 {len(df_mapa_vol):,} registros con volumen georreferenciados")
+        st.caption(
+            f"📍 {len(df_mapa_vol):,} registros con volumen georreferenciados")
 
         layer = pdk.Layer(
             "ScatterplotLayer", data=df_mapa_vol,
@@ -418,7 +560,8 @@ else:
         )
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
-            initial_view_state=pdk.ViewState(latitude=-32.5, longitude=-56.0, zoom=6),
+            initial_view_state=pdk.ViewState(
+                latitude=-32.5, longitude=-56.0, zoom=6),
             map_style=MAPA_ESTILO,
-            tooltip={"text": "Volumen: {Volumen} m³\nUso: {Uso}"}
+            tooltip={"text": "Volumen: {Volumen} m3\nUso: {Uso}"}
         ))
