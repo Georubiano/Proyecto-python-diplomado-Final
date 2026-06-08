@@ -387,12 +387,13 @@ with tab_sol:
 st.markdown("---")
 
 # =========================================================
+# =========================================================
 # SECCION 6 — HEATMAP TEMPORAL
 # =========================================================
-st.header("🗓️ Solicitudes por Departamento y Ano")
+st.header("🗓️ Solicitudes por Departamento y Año")
 st.markdown(
     "Intensidad de solicitudes por departamento a lo largo del tiempo. "
-    "Colores mas oscuros indican mayor actividad."
+    "Colores más oscuros indican mayor actividad."
 )
 
 df_heat = df_f[df_f["Anio_Solicitud"].between(2010, 2025)].copy()
@@ -424,9 +425,9 @@ fig_heat, ax_heat = plt.subplots(figsize=(14, 7))
 sns.heatmap(datos_heat, annot=True, fmt=fmt, cmap=cmap_heat,
             linewidths=0.4, linecolor="black",
             cbar_kws={"label": cbar_label, "shrink": 0.8}, ax=ax_heat)
-ax_heat.set_title("Solicitudes por departamento y ano",
+ax_heat.set_title("Solicitudes por departamento y año",
                   fontsize=14, fontweight="bold", pad=16)
-ax_heat.set_xlabel("Ano", fontsize=11)
+ax_heat.set_xlabel("Año", fontsize=11)
 ax_heat.set_ylabel("Departamento", fontsize=11)
 ax_heat.tick_params(axis="x", rotation=45, labelsize=10)
 ax_heat.tick_params(axis="y", rotation=0, labelsize=10)
@@ -438,16 +439,16 @@ anio_pico = int(col_max.idxmax())
 depto_top = datos_heat.sum(axis=1).idxmax()
 depto_crecimiento = (datos_heat[2025] - datos_heat[2010]).idxmax()
 st.markdown(
-    f"**Observaciones:** el ano con mayor actividad global fue **{anio_pico}**. "
-    f"El departamento con mas solicitudes historicas es **{depto_top}**. "
-    f"El mayor crecimiento entre 2010 y 2025 se registro en **{depto_crecimiento}**."
+    f"**Observaciones:** el año con mayor actividad global fue **{anio_pico}**. "
+    f"El departamento con más solicitudes históricas es **{depto_top}**. "
+    f"El mayor crecimiento entre 2010 y 2025 se registró en **{depto_crecimiento}**."
 )
 st.markdown("---")
 
 # =========================================================
 # SECCION 7 — MAPA GEOGRAFICO
 # =========================================================
-st.header("🗺️ Distribucion Geografica de las Solicitudes")
+st.header("🗺️ Distribución Geográfica de las Solicitudes")
 
 modo_mapa = st.radio(
     "Colorear puntos por:",
@@ -543,12 +544,12 @@ else:
             f"margin-bottom:12px;font-size:12px;'>"
             f"<span>Volumen:</span>"
             f"<span style='background:{hex_b};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Bajo (&lt;{vol_min:,} m3)</span>"
+            f"border-radius:12px;'>Bajo (&lt;{vol_min:,} m³)</span>"
             f"<span style='background:{hex_m};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Medio (~{vol_med:,} m3)</span>"
+            f"border-radius:12px;'>Medio (~{vol_med:,} m³)</span>"
             f"<span style='background:{hex_a};color:white;padding:3px 10px;"
-            f"border-radius:12px;'>Alto (&gt;{vol_max:,} m3)</span>"
-            f"<span style='color:#aaa;'>Tamano proporcional al volumen</span>"
+            f"border-radius:12px;'>Alto (&gt;{vol_max:,} m³)</span>"
+            f"<span style='color:#aaa;'>Tamaño proporcional al volumen</span>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -565,5 +566,5 @@ else:
             initial_view_state=pdk.ViewState(
                 latitude=-32.5, longitude=-56.0, zoom=6),
             map_style=MAPA_ESTILO,
-            tooltip={"text": "Volumen: {Volumen} m3\nUso: {Uso}"}
+            tooltip={"text": "Volumen: {Volumen} m³\nUso: {Uso}"}
         ))
