@@ -11,7 +11,7 @@ from pathlib import Path
 # CONFIGURACION DE LA PAGINA
 # =========================================================
 st.set_page_config(
-    page_title="Gestion de Recursos Hidricos - DINAGUA",
+    page_title="Gestión de Recursos Hídricos - DINAGUA",
     page_icon="💧",
     layout="wide"
 )
@@ -107,10 +107,10 @@ df_f = df[
 # =========================================================
 # ENCABEZADO
 # =========================================================
-st.title("💧 Gestion de Recursos Hidricos — DINAGUA")
+st.title("💧 Gestión de Recursos Hídricos — DINAGUA")
 st.markdown(
-    "Analisis interactivo de solicitudes de derechos de uso de agua "
-    "registradas por la Direccion Nacional de Aguas del Uruguay."
+    "Análisis interactivo de solicitudes de derechos de uso de agua "
+    "registradas por la Dirección Nacional de Aguas del Uruguay."
 )
 st.markdown("---")
 
@@ -189,16 +189,16 @@ st.markdown("---")
 # =========================================================
 # SECCION 3 — DISTRIBUCION DE INDICADORES TEMPORALES
 # =========================================================
-st.header("📊 Distribucion de los Indicadores Temporales")
+st.header("📊 Distribución de los Indicadores Temporales")
 st.markdown(
-    "Distribucion de las tres etapas del proceso administrativo "
+    "Distribución de las etapas del proceso administrativo "
     "de solicitudes de derechos de uso de agua."
 )
 
 indicadores = [
-    ("Demora_Tecnica",   "Demora Tecnica (Solicitud → Resolucion)",   "#1D9E75"),
-    ("Demora_Registral", "Demora Registral (Resolucion → Inscripcion)", "#5A7DD8"),
-    ("Demora_Total",     "Demora Total (Solicitud → Inscripcion)",     "#D85A30"),
+    ("Demora_Tecnica",   "Demora Tecnica (Solicitud → Resolución)",   "#1D9E75"),
+    ("Demora_Registral", "Demora Registral (Resolucion → Inscripción)", "#5A7DD8"),
+    ("Demora_Total",     "Demora Total (Solicitud → Inscripción)",     "#D85A30"),
 ]
 
 fig_dist, axes_dist = plt.subplots(3, 1, figsize=(12, 10))
