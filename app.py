@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import traceback
 import streamlit as st
 import pandas as pd
@@ -276,9 +277,10 @@ st.pyplot(fig3)
 st.markdown("---")
 
 # =========================================================
+# =========================================================
 # SECCION 5 — SERIES TEMPORALES
 # =========================================================
-st.header("📅 Evolucion Temporal")
+st.header("📅 Evolución Temporal")
 
 df_temp = df_f[df_f["Anio_Solicitud"].between(2000, 2025)].copy()
 
@@ -299,8 +301,8 @@ with tab_vol:
                           alpha=0.25, color="#1D9E75")
         ax_v.plot(vol_anual["Anio_Solicitud"], vol_anual["Volumen_M"],
                   color="#1D9E75", linewidth=2.5, marker="o", markersize=5)
-        ax_v.set_ylabel("Volumen autorizado (millones m3)", fontsize=11)
-        ax_v.set_title("Volumen total autorizado por ano", fontsize=14,
+        ax_v.set_ylabel("Volumen autorizado (millones m³)", fontsize=11)
+        ax_v.set_title("Volumen total autorizado por año", fontsize=14,
                        fontweight="bold")
     elif modo_vol == "Uso":
         vol_uso = (df_temp.groupby(["Anio_Solicitud", "Uso"])["Volumen"]
@@ -308,8 +310,8 @@ with tab_vol:
         for col in vol_uso.columns:
             ax_v.plot(vol_uso.index, vol_uso[col], linewidth=2,
                       marker="o", markersize=4, label=col)
-        ax_v.set_ylabel("Volumen (millones m3)", fontsize=11)
-        ax_v.set_title("Volumen autorizado por ano y Tipo de Uso",
+        ax_v.set_ylabel("Volumen (millones m³)", fontsize=11)
+        ax_v.set_title("Volumen autorizado por año y Tipo de Uso",
                        fontsize=14, fontweight="bold")
         ax_v.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
     else:
@@ -320,12 +322,12 @@ with tab_vol:
         for col in vol_dep.columns:
             ax_v.plot(vol_dep.index, vol_dep[col], linewidth=2,
                       marker="o", markersize=4, label=col)
-        ax_v.set_ylabel("Volumen (millones m3)", fontsize=11)
-        ax_v.set_title("Volumen autorizado por ano y Departamento (top 5)",
+        ax_v.set_ylabel("Volumen (millones m³)", fontsize=11)
+        ax_v.set_title("Volumen autorizado por año y Departamento (top 5)",
                        fontsize=14, fontweight="bold")
         ax_v.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
 
-    ax_v.set_xlabel("Ano", fontsize=11)
+    ax_v.set_xlabel("Año", fontsize=11)
     ax_v.set_xticks(range(2000, 2026, 5))
     ax_v.tick_params(axis="x", rotation=45)
     ax_v.grid(axis="y", linestyle="--", linewidth=0.7, color="gray", alpha=0.5)
@@ -349,7 +351,7 @@ with tab_sol:
         ax_s.plot(sol_anual["Anio_Solicitud"], sol_anual["Cantidad"],
                   color="#5A7DD8", linewidth=2.5, marker="o", markersize=5)
         ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
-        ax_s.set_title("Cantidad de solicitudes por ano", fontsize=14,
+        ax_s.set_title("Cantidad de solicitudes por año", fontsize=14,
                        fontweight="bold")
     elif modo_sol == "Uso":
         sol_uso = (df_temp.groupby(["Anio_Solicitud", "Uso"])
@@ -358,7 +360,7 @@ with tab_sol:
             ax_s.plot(sol_uso.index, sol_uso[col], linewidth=2,
                       marker="o", markersize=4, label=col)
         ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
-        ax_s.set_title("Solicitudes por ano y Tipo de Uso",
+        ax_s.set_title("Solicitudes por año y Tipo de Uso",
                        fontsize=14, fontweight="bold")
         ax_s.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
     else:
@@ -370,11 +372,11 @@ with tab_sol:
             ax_s.plot(sol_dep.index, sol_dep[col], linewidth=2,
                       marker="o", markersize=4, label=col)
         ax_s.set_ylabel("Cantidad de solicitudes", fontsize=11)
-        ax_s.set_title("Solicitudes por ano y Departamento (top 5)",
+        ax_s.set_title("Solicitudes por año y Departamento (top 5)",
                        fontsize=14, fontweight="bold")
         ax_s.legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc="upper left")
 
-    ax_s.set_xlabel("Ano", fontsize=11)
+    ax_s.set_xlabel("Año", fontsize=11)
     ax_s.set_xticks(range(2000, 2026, 5))
     ax_s.tick_params(axis="x", rotation=45)
     ax_s.grid(axis="y", linestyle="--", linewidth=0.7, color="gray", alpha=0.5)
