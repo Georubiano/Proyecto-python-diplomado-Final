@@ -124,9 +124,9 @@ ultimo_anio_count = int(por_anio.get(anio_max, 0))
 
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Registros filtrados", f"{len(df_f):,}")
-col2.metric("Mediana demora tecnica", f"{df_f['Demora_Tecnica'].median():.0f} dias")
+col2.metric("Mediana demora técnica", f"{df_f['Demora_Tecnica'].median():.0f} dias")
 col3.metric(f"Derechos otorgados en {anio_max}", f"{ultimo_anio_count:,}")
-col4.metric("Promedio anual historico", f"{promedio_anual:,.0f}")
+col4.metric("Promedio anual histórico", f"{promedio_anual:,.0f}")
 col5.metric("Departamentos", f"{df_f['Departamento'].nunique()}")
 
 st.markdown("---")
