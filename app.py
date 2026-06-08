@@ -465,7 +465,7 @@ df_mapa = df_mapa[
     (df_mapa["lon"].between(-59.5, -53.0))
 ].dropna(subset=["lat", "lon"])
 
-MAPA_ESTILO = "mapbox://styles/mapbox/dark-v10"
+MAPA_ESTILO = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
 if df_mapa.empty:
     st.warning("No hay puntos georreferenciados para los filtros seleccionados.")
